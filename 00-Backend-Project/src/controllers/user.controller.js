@@ -84,7 +84,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
         "-password -refreshTokens"
     )
 
-    console.log("\n\n\n USER CREATED \n\n", createdUser);
+    // console.log("\n\n\n USER CREATED \n\n", createdUser);
 
     if (!createdUser) {
         throw new ApiError(500, "User can't be registered ")
@@ -168,8 +168,12 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(
         userId,
         {
-            $set: {
-                refreshToken: undefined
+            // $set: {
+            //     refreshToken: undefined
+            // }
+
+            $unset: {
+                refreshToken: 1
             }
         }, {
         new: true
@@ -439,7 +443,7 @@ const getUserChannelUpdates = asyncHandler(async (req, res) => {
 })
 
 const getUserWatchHistory = asyncHandler(async (req, res) => {
-    const historyDetails = await User.aggregate([
+    const user = await User.aggregate([
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(req.user?._id)
@@ -482,8 +486,8 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
     ])
     // console.log(watchHistory);
 
-    return res.status(200).json(new ApiResponse(200, historyDetails[0].watchHistory, "User History Fetched Successfully"))
-      
+    return res.status(200).json(new ApiResponse(200, { watchHistory: user[0].watchHistory }, "User History Fetched Successfully"))
+
 
 })
 
