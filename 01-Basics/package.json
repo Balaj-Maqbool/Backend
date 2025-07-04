@@ -1,0 +1,24 @@
+{
+  "name": "starting_with_node",
+  "version": "1.0.0",
+  "description": "going to make a simple backend server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "type": "module",
+  "keywords": [
+    "node",
+    "npm",
+    "init",
+    "start",
+    "express"
+  ],
+  "author": "Balaj Maqbool",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
+}
