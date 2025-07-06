@@ -23,4 +23,5 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
     next()
 })
 
+
 export { verifyJWT }

@@ -6,8 +6,8 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import { REFRESH_TOKEN_SECRET } from "../constants.js";
-import fs from "fs"
-import mongoose, { mongo } from "mongoose";
+// import fs from "fs"
+import mongoose from "mongoose";
 // import { subscribe } from "diagnostics_channel";
 
 

@@ -15,6 +15,7 @@ import {
 
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { deleteAVideo } from "../controllers/video.controller.js";
 const router = Router()
 
 router.route("/register").post(
@@ -57,6 +58,7 @@ router.route("/update-coverImage").patch(
 
 router.route("/channel/:username").get(verifyJWT, getUserChannelUpdates)
 router.route("/watch-history").get(verifyJWT, getUserWatchHistory)
+
 
 
 
