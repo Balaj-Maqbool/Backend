@@ -110,33 +110,7 @@ const getVideoDetails = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, videoDetails[0], "Video Owner Data fetch successfully !!"))
 
-    //     [{
-    //     $lookup: {
-    //         from: "users",
-    //         localField: "owner",
-    //         foreignField: "_id",
-    //         as: "owner"
-    //     }
-    // },
-    // {
-    //     $addFields: {
-    //         ownerDetails: {
-    //             username: {$first:"$owner.username"},
-    //             fullName: {$first:"$owner.fullName"},
-    //             email: {$first:"$owner.email"},
-    //             watchHistory: {$first:"$owner.watchHistory"}
-    //         }
-    //     }
-    // },
-    // {
-    //     $project: {
-    //         title: 1,
-    //         thumbnail: 1,
-    //         description: 1,
-    //         videoFile: 1,
-    //         ownerDetails:1
-    //     }
-    // }]
+
 
 
 })
@@ -223,7 +197,7 @@ const toggleIsPublished = asyncHandler(async (req, res) => {
         $set: {
             isPublished: !video?.isPublished
         },
-        $inc:{views:0},
+        $inc: { views: 0 },
         new: true
     }).select("isPublished _id title isPublished owner views")
     if (!updatedVideo) {
@@ -244,20 +218,76 @@ const toggleViews = asyncHandler(async (req, res) => {
     }
 
     const updatedVideo = await Video.findByIdAndUpdate(videoId, {
-        $inc:{views:1},
+        $inc: { views: 1 },
         new: true,
-        projection:{__v:0}
+        projection: { __v: 0 }
     }).select("_id title views")
     if (!updatedVideo) {
         throw new ApiError(500, "published status cannot be toggled right now")
     }
     return res.status(202).json(new ApiResponse(200, updatedVideo, "Views increased Successfully!!"))
 })
- const getAllVideos = asyncHandler(async(req,res)=>{
-    const videos = await Video.find()
-    
-return res.status(200).json(new ApiResponse(200,videos,"All videos Fetched Successfully"))
- })
+const getAllVideos = asyncHandler(async (req, res) => {
+    const page = req.query?.page || 1;
+    const limit = req.query?.limit || 3;
+    const sortBy = req.query?.sortBy || "views"
+    const order = req.query?.order === "asc" ? 1 : -1
+
+    const videos = await Video.aggregatePaginate(
+        Video.aggregate(
+            [
+                {
+                    $match: {}
+                },
+                {
+                    $sort: { [sortBy]: order }
+                },
+                {
+
+                    $lookup: {
+                        from: "users",
+                        localField: "owner",
+                        foreignField: "_id",
+                        as: "owner"
+                    }
+                },
+                // {
+                //     $unwind: "$owner"
+                // },
+                {
+                    $addFields: {
+                        ownerDetails: {
+                            username: { $first: "$owner.username" },
+                            fullName: { $first: "$owner.fullName" },
+                            email: { $first: "$owner.email" },
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id:1,
+                        isPublished:1,
+                        title: 1,
+                        thumbnail: 1,
+                        description: 1,
+                        videoFile: 1,
+                        views: 1,
+                        ownerDetails: 1
+                    }
+                }
+            ]
+        ),
+        {
+            page,
+            limit
+        }
+    )
+    if (!videos) {
+        throw new ApiError(404, "No Videos were found in the DB")
+    }
+
+    return res.status(200).json(new ApiResponse(200, videos, "All videos Fetched Successfully"))
+})
 
 export {
     uploadAVideo,
