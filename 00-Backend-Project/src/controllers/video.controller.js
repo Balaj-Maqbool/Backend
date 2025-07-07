@@ -9,6 +9,7 @@ import { REFRESH_TOKEN_SECRET } from "../constants.js";
 import fs from "fs"
 import mongoose from "mongoose";
 import { log } from "console";
+import { json } from "stream/consumers";
 
 
 const uploadAVideo = asyncHandler(async (req, res) => {
@@ -232,59 +233,69 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const limit = req.query?.limit || 3;
     const sortBy = req.query?.sortBy || "views"
     const order = req.query?.order === "asc" ? 1 : -1
-
-    const videos = await Video.aggregatePaginate(
-        Video.aggregate(
-            [
+    const username = req.query?.username || ""
+    let user;
+    const pipeline = [];
+    if (username) {
+        user = await User.findOne({ username: username.trim() }).select("_id")
+        if (!user) {
+            throw new ApiError(404, "The User Does Not Exists , Wrong username")
+        } else {
+            pipeline.push(
                 {
-                    $match: {}
-                },
-                {
-                    $sort: { [sortBy]: order }
-                },
-                {
-
-                    $lookup: {
-                        from: "users",
-                        localField: "owner",
-                        foreignField: "_id",
-                        as: "owner"
-                    }
-                },
-                // {
-                //     $unwind: "$owner"
-                // },
-                {
-                    $addFields: {
-                        ownerDetails: {
-                            username: { $first: "$owner.username" },
-                            fullName: { $first: "$owner.fullName" },
-                            email: { $first: "$owner.email" },
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id:1,
-                        isPublished:1,
-                        title: 1,
-                        thumbnail: 1,
-                        description: 1,
-                        videoFile: 1,
-                        views: 1,
-                        ownerDetails: 1
-                    }
+                    $match: { owner: user?._id }
                 }
-            ]
-        ),
+            )
+        }
+    }
+    pipeline.push(
         {
-            page,
-            limit
+            $sort: { [sortBy]: order }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        // {
+        //     $unwind: "$owner"
+        // },
+        {
+            $addFields: {
+                ownerDetails: {
+                    username: { $first: "$owner.username" },
+                    fullName: { $first: "$owner.fullName" },
+                    email: { $first: "$owner.email" },
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                isPublished: 1,
+                title: 1,
+                thumbnail: 1,
+                description: 1,
+                videoFile: 1,
+                views: 1,
+                ownerDetails: 1,
+            }
         }
     )
-    if (!videos) {
-        throw new ApiError(404, "No Videos were found in the DB")
-    }
+
+
+    const videos = await Video.aggregatePaginate(
+        Video.aggregate(pipeline),
+        { page, limit }
+    )
+    // console.log(videos);
+    
+    // if (JSON.stringify(videos?.docs)===JSON.stringify([])) {
+    //     throw new ApiError(404, "No Videos were found in the DB")
+    // }
 
     return res.status(200).json(new ApiResponse(200, videos, "All videos Fetched Successfully"))
 })
