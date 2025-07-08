@@ -4,12 +4,7 @@ import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 import ApiResponse from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken"
-import { REFRESH_TOKEN_SECRET } from "../constants.js";
-import fs from "fs"
 import mongoose from "mongoose";
-import { log } from "console";
-import { json } from "stream/consumers";
 
 
 const uploadAVideo = asyncHandler(async (req, res) => {
@@ -117,8 +112,13 @@ const getVideoDetails = asyncHandler(async (req, res) => {
 })
 
 const updateVideoCredentials = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
     const { videoId } = req.params
     const { title, description } = req.body
+    if (!userId) {
+        throw new ApiError(403, "User not Logged In")
+    }
+
     if (!videoId) {
         throw new ApiError(404, "Video Id not found in the url")
     }
@@ -126,6 +126,7 @@ const updateVideoCredentials = asyncHandler(async (req, res) => {
     if ([title, description].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required to change the video credentials")
     }
+
     const thumbnailLocalPath = req.file?.path;
     if (!thumbnailLocalPath) {
         throw new ApiError(404, "Thumbnail file path not found")
@@ -134,7 +135,10 @@ const updateVideoCredentials = asyncHandler(async (req, res) => {
     if (!uploadedThumbnail?.url) {
         throw new ApiError(424, "thumbnail File can't be uploaded on cloudinary")
     }
-    const updatedVideo = await Video.findByIdAndUpdate(videoId, {
+    const updatedVideo = await Video.findOneAndUpdate(
+        {
+            $and: [{ _id: new mongoose.Types.ObjectId(videoId) }, { owner: userId }]
+        }, {
         $set: {
             title: title,
             description: description,
@@ -142,9 +146,10 @@ const updateVideoCredentials = asyncHandler(async (req, res) => {
         },
         new: true
     }).select("-videoFile")
+    console.log(updatedVideo);
 
     if (!updatedVideo) {
-        throw new ApiError(500, "Video credentials cant be updated right now")
+        throw new ApiError(403, "Unauthorized Access , Video Id is Wrong or the User is not Allowed ")
     }
     return res.status(202).json(new ApiResponse(202, updatedVideo, "Video credentials updated successfully"))
 
@@ -152,18 +157,27 @@ const updateVideoCredentials = asyncHandler(async (req, res) => {
 })
 
 const deleteAVideo = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
     const { videoId } = req.params
     if (!videoId) {
         throw new ApiError(404, "Video Id not found in the url")
     }
+    if (!userId) {
+        throw new ApiError(403, "User not Logged In")
+    }
+    const video = await Video.findOne(
+        {
+            $and: [{ _id: new mongoose.Types.ObjectId(videoId) }, { owner: userId }]
+        }
+    )
+    // console.log(video); 
 
-    const video = await Video.findById(videoId)
     if (!video) {
-        throw new ApiError(400, "Video not found, wrong ID")
+        throw new ApiError(403, "Unauthorized Access , Video Id is Wrong or the User is not Allowed")
     }
     const deleteVideoFile = await deleteFromCloudinary(video?.videoFilePublicId, "video");
     const deleteThumbnail = await deleteFromCloudinary(video?.thumbnailPublicId, "image");
-    console.log(deleteThumbnail, deleteVideoFile);
+    // console.log(deleteThumbnail, deleteVideoFile);
 
     if (deleteVideoFile?.result !== "ok") {
         throw new ApiError(404, "video not found on Cloudinary")
@@ -180,9 +194,13 @@ const deleteAVideo = asyncHandler(async (req, res) => {
 })
 
 const toggleIsPublished = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
     const { videoId } = req.params
     if (!videoId) {
         throw new ApiError(404, "Video Id not found in the url")
+    }
+    if (!userId) {
+        throw new ApiError(404, "User not found, or is logged out")
     }
     const video = await Video.findById(videoId)
     if (!video) {
@@ -194,15 +212,19 @@ const toggleIsPublished = asyncHandler(async (req, res) => {
     // video.isPublished = !video?.isPublished
     // const updatedVideo = await video.save();
 
-    const updatedVideo = await Video.findByIdAndUpdate(videoId, {
-        $set: {
-            isPublished: !video?.isPublished
+    const updatedVideo = await Video.findOneAndUpdate(
+        {
+            $and: [{ _id: new mongoose.Types.ObjectId(videoId) }, { owner: userId }]
         },
-        $inc: { views: 0 },
-        new: true
-    }).select("isPublished _id title isPublished owner views")
+        {
+            $set: {
+                isPublished: !video?.isPublished
+            },
+            $inc: { views: 0 },
+            new: true
+        }).select("isPublished _id title isPublished owner views")
     if (!updatedVideo) {
-        throw new ApiError(500, "published status cannot be toggled right now")
+        throw new ApiError(403, "Unauthorized Access !!! Wrong User or Video Id")
     }
     return res.status(202).json(new ApiResponse(200, updatedVideo, "Video Publish status toggled successfully"))
 })
@@ -234,10 +256,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const sortBy = req.query?.sortBy || "views"
     const order = req.query?.order === "asc" ? 1 : -1
     const username = req.query?.username || ""
-    let user;
     const pipeline = [];
     if (username) {
-        user = await User.findOne({ username: username.trim() }).select("_id")
+        const user = await User.findOne({ username: username.trim() }).select("_id")
         if (!user) {
             throw new ApiError(404, "The User Does Not Exists , Wrong username")
         } else {
@@ -292,7 +313,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         { page, limit }
     )
     // console.log(videos);
-    
+
     // if (JSON.stringify(videos?.docs)===JSON.stringify([])) {
     //     throw new ApiError(404, "No Videos were found in the DB")
     // }

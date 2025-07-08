@@ -15,7 +15,6 @@ import {
 
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { deleteAVideo } from "../controllers/video.controller.js";
 const router = Router()
 
 router.route("/register").post(
