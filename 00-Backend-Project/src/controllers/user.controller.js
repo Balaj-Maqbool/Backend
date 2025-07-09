@@ -2,6 +2,7 @@
 import { promiseAsyncHandler as asyncHandler } from "../utils/AsyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
+import { Video } from "../models/video.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
@@ -374,6 +375,34 @@ const updateTheCoverImage = asyncHandler(async function (req, res, next) {
 
 })
 
+const addVideoToWatchHistory = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
+    const videoId = req.params?.videoId
+    if (!userId) {
+        throw new ApiError(403, "Unauthorized Access , User not Found")
+    }
+    const confirmedVideoId = await Video.findById(new mongoose.Types.ObjectId(videoId)).select("_id")
+
+    if (!confirmedVideoId) {
+        throw new ApiError(404, "Video Found in the DB, wrong video Id")
+    }
+    const user = await User.findByIdAndUpdate(
+        userId,
+        {
+            $addToSet: { watchHistory: videoId }
+        },
+        {
+            new: true
+        }
+    ).select("_id username watchHistory")
+
+    if (!user) {
+        throw new ApiError(403, " Unauthorized Access , wrong user Id")
+    }
+
+    return res.status(200).json(new ApiResponse(200, user, "Video added to user WatchHistory Successfully!!"))
+})
+
 
 const getUserChannelUpdates = asyncHandler(async (req, res) => {
     const { username } = req.params
@@ -467,26 +496,53 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                                     $project: {
                                         username: 1,
                                         fullName: 1,
-                                        avatar: 1
                                     }
                                 }
                             ]
                         }
                     },
                     {
+                        $unwind: "$owner"
+                    },
+                    {
                         $addFields: {
-                            owner: {
-                                $first: "$owner"
-                            }
+                            videoOwner: "$owner",
+                            videoId: "$_id"
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 0,
+                            videoId: 1,
+                            title: 1,
+                            views: 1,
+                            videoOwner: 1,
                         }
                     }
                 ]
+            }
+        },
+        {
+            $addFields: {
+                currentUser: {
+                    userId: "$_id",
+                    username: "$username",
+                    email: "$email"
+
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                currentUser: 1,
+                watchHistory: 1
             }
         }
     ])
     // console.log(watchHistory);
 
-    return res.status(200).json(new ApiResponse(200, { watchHistory: user[0].watchHistory }, "User History Fetched Successfully"))
+    return res.status(200).json(new ApiResponse(200, user[0], "User History Fetched Successfully"))
 
 
 })
@@ -502,5 +558,6 @@ export {
     updateTheAvatar,
     updateTheCoverImage,
     getUserChannelUpdates,
-    getUserWatchHistory
+    getUserWatchHistory,
+    addVideoToWatchHistory
 }
