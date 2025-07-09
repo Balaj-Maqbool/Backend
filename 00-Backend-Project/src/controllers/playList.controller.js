@@ -204,11 +204,11 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Unauthorized Access , This Video does not exist ")
     }
     // console.log(confirmedVideoId);
-    
+
     const videoRemovedPlaylist = await PlayList.findByIdAndUpdate(
         playlistId?.trim(),
         {
-            $pull: { videos: new Types.ObjectId(confirmedVideoId)}
+            $pull: { videos: confirmedVideoId._id }
         },
         {
             new: true
