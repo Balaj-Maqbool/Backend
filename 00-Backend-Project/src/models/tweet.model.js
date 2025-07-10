@@ -4,14 +4,14 @@ const tweetSchema = new Schema(
     {
         owner: {
             type: Schema.Types.ObjectId,
-            ref: "User"
+            ref: "User",
         },
         content: {
             type: String,
-            required: true
-        }
+            required: true,
+        },
+    },
+    { timestamps: true }
+);
 
-    }
-    , { timestamps: true })
-
-export const Tweet = model("Tweet", tweetSchema)
+export const Tweet = model("Tweet", tweetSchema);

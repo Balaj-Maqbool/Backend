@@ -4,22 +4,22 @@ const likeSchema = new Schema(
     {
         comment: {
             type: Schema.Types.ObjectId,
-            ref: "Comment"
+            ref: "Comment",
         },
         likedBy: {
             type: Schema.Types.ObjectId,
-            ref:"User"
+            ref: "User",
         },
         video: {
             type: Schema.Types.ObjectId,
-            ref: "Video"
+            ref: "Video",
         },
-        tweet:{
-             type: Schema.Types.ObjectId,
-            ref: "Tweet"
-        }
+        tweet: {
+            type: Schema.Types.ObjectId,
+            ref: "Tweet",
+        },
+    },
+    { timestamps: true }
+);
 
-    }
-    , { timestamps: true })
-
-export const Like = model("Like", likeSchema)
+export const Like = model("Like", likeSchema);

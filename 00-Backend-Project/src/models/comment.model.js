@@ -4,18 +4,18 @@ const commentSchema = new Schema(
     {
         owner: {
             type: Schema.Types.ObjectId,
-            ref: "User"
+            ref: "User",
         },
         content: {
             type: String,
-            required: true
+            required: true,
         },
-        video:{
+        video: {
             type: Schema.Types.ObjectId,
-            ref: "Video"
-        }
+            ref: "Video",
+        },
+    },
+    { timestamps: true }
+);
 
-    }
-    , { timestamps: true })
-
-export const Comment = model("Comment", commentSchema)
+export const Comment = model("Comment", commentSchema);
