@@ -9,7 +9,7 @@ const trycatchAsyncHandler = (requestHandler) => async (req, res, next) => {
     try {
         await requestHandler(req, res, next);
     } catch (error) {
-        throw new ApiError(404, error?.message || "Unauthorized access,Token expired");
+        throw new ApiError(400, error?.message || "Unauthorized access,Token expired");
     }
 };
 

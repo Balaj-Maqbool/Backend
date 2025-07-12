@@ -285,9 +285,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 as: "owner",
             },
         },
-        // {
-        //     $unwind: "$owner"
-        // },
         {
             $addFields: {
                 ownerDetails: {

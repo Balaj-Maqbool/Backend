@@ -1,8 +1,9 @@
 import { Schema, model } from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const commentSchema = new Schema(
     {
-        owner: {
+        commentOwner: {
             type: Schema.Types.ObjectId,
             ref: "User",
         },
@@ -18,4 +19,5 @@ const commentSchema = new Schema(
     { timestamps: true }
 );
 
+commentSchema.plugin(mongooseAggregatePaginate);
 export const Comment = model("Comment", commentSchema);
