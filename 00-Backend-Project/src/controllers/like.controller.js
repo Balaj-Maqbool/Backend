@@ -141,4 +141,190 @@ const toggleTweetLikes = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, addedLikeDetails, "Like added to a Tweet Successfully"));
 });
 
-export { toggleVideoLikes, toggleCommentLikes, toggleTweetLikes };
+const getVideoLikes = asyncHandler(async (req, res) => {
+    const videoId = req.params.videoId;
+
+    throwIfInvalid(!videoId, 400, "Video Id Missing");
+    throwIfInvalid(!Types.ObjectId.isValid(videoId), 400, "Invalid Video Id");
+
+    const video = await Video.findById(videoId);
+    throwIfInvalid(!video, 404, "Video Not Found, Wrong Id");
+    let videoLikesDetail = await Like.aggregate([
+        {
+            $match: {
+                video: video._id,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "likedBy",
+                foreignField: "_id",
+                as: "likedBy",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: {
+                path: "$likedBy",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $group: {
+                _id: "$video",
+                totalVideoLikes: { $sum: 1 },
+                likes: {
+                    $push: { like_id: "$_id", video_id: "$video", likedBy: "$likedBy" },
+                },
+            },
+        },
+    ]);
+    // console.log(videoLikesDetail);
+
+    if (JSON.stringify(videoLikesDetail) === "[]") {
+        return res.status(200).json(new ApiResponse(200, { _id: video._id, totalVideoLikes: 0 }));
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videoLikesDetail[0], "All video likes fetched Successfully"));
+});
+
+const getTweetLikes = asyncHandler(async (req, res) => {
+    const tweetId = req.params.tweetId;
+
+    throwIfInvalid(!tweetId, 400, "Tweet Id Missing");
+    throwIfInvalid(!Types.ObjectId.isValid(tweetId), 400, "Invalid Tweet Id");
+
+    const tweet = await Tweet.findById(tweetId);
+    throwIfInvalid(!tweet, 404, "Tweet Not Found, Wrong Id");
+    let tweetLikesDetail = await Like.aggregate([
+        {
+            $match: {
+                tweet: tweet._id,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "likedBy",
+                foreignField: "_id",
+                as: "likedBy",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: {
+                path: "$likedBy",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $group: {
+                _id: "$tweet",
+                totalTweetLikes: { $sum: 1 },
+                likes: {
+                    $push: { like_id: "$_id", tweet_id: "$tweet", likedBy: "$likedBy" },
+                },
+            },
+        },
+    ]);
+
+    if (JSON.stringify(tweetLikesDetail) === "[]") {
+        return res.status(200).json(new ApiResponse(200, { _id: tweet._id, totalTweetLikes: 0 }));
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, tweetLikesDetail[0], "All Tweet likes fetched Successfully"));
+});
+
+const getCommentLikes = asyncHandler(async (req, res) => {
+    const commentId = req.params.commentId;
+
+    throwIfInvalid(!commentId, 400, "Comment Id Missing");
+    throwIfInvalid(!Types.ObjectId.isValid(commentId), 400, "Invalid Comment Id");
+
+    const comment = await Comment.findById(commentId);
+    throwIfInvalid(!comment, 404, "Comment Not Found, Wrong Id");
+    let commentLikesDetail = await Like.aggregate([
+        {
+            $match: {
+                comment: comment._id,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "likedBy",
+                foreignField: "_id",
+                as: "likedBy",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: {
+                path: "$likedBy",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $group: {
+                _id: "$comment",
+                totalCommentLikes: { $sum: 1 },
+                likes: {
+                    $push: { like_id: "$_id", comment_id: "$comment", likedBy: "$likedBy" },
+                },
+            },
+        },
+    ]);
+
+    if (JSON.stringify(commentLikesDetail) === "[]") {
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { _id: comment._id, totalCommentLikes: 0 }));
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, commentLikesDetail[0], "All Comment likes fetched Successfully")
+        );
+});
+
+export {
+    toggleVideoLikes,
+    toggleCommentLikes,
+    toggleTweetLikes,
+    getVideoLikes,
+    getTweetLikes,
+    getCommentLikes,
+};
